@@ -7,6 +7,8 @@ PERSISTENT_DIR="/data/adb/bindhosts"
 # bindhosts.sh
 # bindhosts' processing backend
 
+nproc=$(busybox nproc)
+
 # grab own info (version)
 versionCode=$(grep versionCode $MODDIR/module.prop | sed 's/versionCode=//g' )
 
@@ -111,7 +113,16 @@ download() {
         else
 		busybox wget -T 10 --no-check-certificate -qO - "$1"
         fi
+}
+
+sort_cmd() {
+	if [ -f /data/data/com.termux/files/usr/bin/sort ]; then
+		/data/data/com.termux/files/usr/bin/sort --parallel=$nproc -u
+        else
+		sort -u
+        fi
 }        
+
 
 adblock() {
 	# source processing start!
@@ -152,7 +163,7 @@ adblock() {
 	for i in $(grep -v "#" $PERSISTENT_DIR/whitelist.txt); do echo "0.0.0.0 $i" ; done >> $folder/tempwhitelist
 	# sed strip out everything with #, double space to single space, replace all 127.0.0.1 to 0.0.0.0
 	# then sort uniq, then grep out whitelist.txt from it
-	sed '/#/d; s/  / /g; /^$/d; s/127.0.0.1/0.0.0.0/' $folder/temphosts | sort -u | grep -Fxvf $folder/tempwhitelist | busybox dos2unix >> $target_hostsfile
+	sed '/#/d; s/  / /g; /^$/d; s/127.0.0.1/0.0.0.0/' $folder/temphosts | sort_cmd | grep -Fxvf $folder/tempwhitelist | busybox dos2unix >> $target_hostsfile
 	# mark it, will be read by service.sh to deduce
 	echo "# bindhosts v$versionCode" >> $target_hostsfile
 }
